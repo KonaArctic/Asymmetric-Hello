@@ -102,7 +102,7 @@ func ( self * Client )startAH( finish * waitFirst )( io.Closer , error ) {
 				return err
 			}
 			if tcphdr.SrcPort == 443 {
-				// FIXME For unclear reasons we need to ignore RSTs
+				// FIXME For unclear reasons ignore RSTs
 				if tcphdr.Flags & 0b00000100 > 0 {
 					err = socket.Discard( )
 					if err != nil {
@@ -135,7 +135,7 @@ func ( self * Client )startAH( finish * waitFirst )( io.Closer , error ) {
 			if slices.Contains( offset , tcphdr.Sequence ) {
 				// Retransmission
 			} else {
-				if len( offset ) >= 3 {
+				if len( offset ) >= 2 {
 					// That's enough packets
 					delete( stream , tuples )
 					continue
