@@ -61,11 +61,6 @@ func ( self * Client )startAH( finish * waitFirst )( io.Closer , error ) {
 			Protocol : 6 ,
 			DestPort : 443 ,
 		} ,
-		detour.Filter{
-			Ingress : true ,
-			Protocol : 6 ,
-			SrcPort : 443 ,
-		} ,
 	} )
 	if err != nil {
 		return nil , err
@@ -100,16 +95,6 @@ func ( self * Client )startAH( finish * waitFirst )( io.Closer , error ) {
 			_ , err = binary.Decode( buffer , binary.BigEndian , & tcphdr )
 			if err != nil {
 				return err
-			}
-			if tcphdr.SrcPort == 443 {
-				// FIXME For unclear reasons ignore RSTs
-				if tcphdr.Flags & 0b00000100 > 0 {
-					err = socket.Discard( )
-					if err != nil {
-						return err
-					}
-				}
-				continue
 			}
 			var tuples string
 			tuples = fmt.Sprint( ip6hdr.Src , ip6hdr.Dst , tcphdr.SrcPort , tcphdr.DestPort )

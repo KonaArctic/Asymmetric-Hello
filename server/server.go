@@ -152,33 +152,40 @@ func ( self * Server )ServeHTTP( respon http.ResponseWriter , reques * http.Requ
 	switch values.Get( "c" ) {
 		// DNS
 		case "r" :
-			var stream io.ReadWriteCloser
+			var stream net.Conn
 			stream , err = net.Dial( "udp" , self.Resolv.String( ) )
 			if err != nil {
 				http.Error( respon , err.Error( ) , http.StatusInternalServerError )
 				return
 			}
 			defer stream.Close( )
-			_ , err = stream.Write( buffer )
-			if err != nil {
-				http.Error( respon , err.Error( ) , http.StatusInternalServerError )
-				return
+			for _ , _ = range make( [ ]any , 5 , 5 ) {
+				_ , err = stream.Write( buffer )
+				if err != nil {
+					http.Error( respon , err.Error( ) , http.StatusInternalServerError )
+					return
+				}
+				err = stream.SetReadDeadline( time.Now( ).Add( time.Second ) )
+				if err != nil {
+					http.Error( respon , err.Error( ) , http.StatusInternalServerError )
+					return
+				}
+				var buffer [ ]byte = make( [ ]byte , 0 , 65535 )
+				var length int
+				length , err = stream.Read( buffer[ : cap( buffer ) ] )
+				buffer = buffer[ : length ]
+				if err == nil {
+					err = stream.Close( )
+					if err != nil {
+						http.Error( respon , err.Error( ) , http.StatusInternalServerError )
+						return
+					}
+					respon.WriteHeader( http.StatusOK )
+					_ , _ = respon.Write( buffer )
+					return
+				}
 			}
-			var buffer [ ]byte = make( [ ]byte , 0 , 65535 )
-			var length int
-			length , err = stream.Read( buffer[ : cap( buffer ) ] )
-			buffer = buffer[ : length ]
-			if err != nil {
-				http.Error( respon , err.Error( ) , http.StatusInternalServerError )
-				return
-			}
-			err = stream.Close( )
-			if err != nil {
-				http.Error( respon , err.Error( ) , http.StatusInternalServerError )
-				return
-			}
-			respon.WriteHeader( http.StatusOK )
-			_ , _ = respon.Write( buffer )
+			http.Error( respon , err.Error( ) , http.StatusInternalServerError )
 			return
 		// Inject
 		case "i" :
