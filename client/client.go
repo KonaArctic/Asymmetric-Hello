@@ -88,10 +88,15 @@ func ( self * Client )startAH( finish * waitFirst )( io.Closer , error ) {
 				continue
 			}
 			var buffer [ ]byte
-			buffer , err = proto.FindHeader( ip6hdr , packet , 6 )
-			if err != nil {
-				return err
+			//buffer , err = proto.FindHeader( ip6hdr , packet , 6 )
+			//if err != nil {
+			//	return err
+			//}
+			if ip6hdr.NextHeader != 6 {
+				// Currently server does not accept extensions headers
+				continue
 			}
+			buffer = packet[ 40 : ]
 			var tcphdr proto.TCPHeader
 			_ , err = binary.Decode( buffer , binary.BigEndian , & tcphdr )
 			if err != nil {
