@@ -17,6 +17,7 @@ import "os"
 import "slices"
 
 type Client struct{
+	Always map[ netip.Prefix ]any
 	Locate * url.URL
 	Resolv string
 }
@@ -98,40 +99,79 @@ func ( self * Client )startAH( finish * waitFirst )( io.Closer , error ) {
 			}
 			var tuples string
 			tuples = fmt.Sprint( ip6hdr.Src , ip6hdr.Dst , tcphdr.SrcPort , tcphdr.DestPort )
-			if tcphdr.Flags & 0b00000010 > 0 {
-				_ , _ = fmt.Fprintf( os.Stdout , "New TCP stream to %v\r\n" , ip6hdr.Dst )
-				stream[ tuples ] = make( [ ]uint32 , 0 , 3 )
-				continue
-			}
-			var offset [ ]uint32
-			offset , ok = stream[ tuples ]
-			if ! ok {
-				continue
-			}
-			if tcphdr.Flags & 0b00000101 > 0 {
-				// FIN / RST
-				delete( stream , tuples )
-				continue
-			}
-			if int( tcphdr.DataOffset ) >> 4 * 4 >= len( buffer ) {
-				// No segment data, no rerouting needed
-				continue
-			}
-			if slices.Contains( offset , tcphdr.Sequence ) {
-				// Retransmission
+			if findPrefix( self.Always , netip.AddrFrom16( [ 16 ]byte( ip6hdr.Dst ) ) ) {
+				// For some non-obvious reason some anycast addresses need all packets to be rerouted
+				if tcphdr.Flags & 0b00000010 > 0 {
+					_ , _ = fmt.Fprintf( os.Stdout , "New anycast stream to %v\r\n" , ip6hdr.Dst )
+					stream[ tuples ] = make( [ ]uint32 , 0 , 3 )
+				} else {
+					var offset [ ]uint32
+					offset , ok = stream[ tuples ]
+					if ! ok {
+						continue
+					}
+					if tcphdr.Flags & 0b00000101 > 0 {
+						// FIN / RST
+						delete( stream , tuples )
+					} else {
+						if int( tcphdr.DataOffset ) >> 4 * 4 < len( buffer ) {
+							// Has segment data
+							if slices.Contains( offset , tcphdr.Sequence ) {
+								// Retransmission of ClientHello
+								err = socket.Discard( )
+								if err != nil {
+									return err
+								}
+							} else {
+								if len( offset ) < 2 {
+									// New ClientHello packet
+									err = socket.Discard( )
+									if err != nil {
+										return err
+									}
+									stream[ tuples ] = append( offset , tcphdr.Sequence )
+								}
+							}
+						}
+					}
+				}
 			} else {
-				if len( offset ) >= 2 {
-					// That's enough packets
+				// Not anycast
+				if tcphdr.Flags & 0b00000010 > 0 {
+					_ , _ = fmt.Fprintf( os.Stdout , "New TCP stream to %v\r\n" , ip6hdr.Dst )
+					stream[ tuples ] = make( [ ]uint32 , 0 , 3 )
+					continue
+				}
+				var offset [ ]uint32
+				offset , ok = stream[ tuples ]
+				if ! ok {
+					continue
+				}
+				if tcphdr.Flags & 0b00000101 > 0 {
+					// FIN / RST
 					delete( stream , tuples )
 					continue
 				}
-				// Another initial packet
-				stream[ tuples ] = append( offset , tcphdr.Sequence )
-			}
-			// Reroute first few packets
-			err = socket.Discard( )
-			if err != nil {
-				return err
+				if int( tcphdr.DataOffset ) >> 4 * 4 >= len( buffer ) {
+					// No segment data, no rerouting needed
+					continue
+				}
+				if slices.Contains( offset , tcphdr.Sequence ) {
+					// Retransmission
+				} else {
+					if len( offset ) >= 2 {
+						// That's enough packets
+						//delete( stream , tuples )
+						continue
+					}
+					// Another initial packet
+					stream[ tuples ] = append( offset , tcphdr.Sequence )
+				}
+				// Reroute first few packets
+				err = socket.Discard( )
+				if err != nil {
+					return err
+				}
 			}
 			// Recalculate checksum - this is needed because of offloading
 			var encode string

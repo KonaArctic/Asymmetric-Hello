@@ -1,4 +1,5 @@
 package client
+import "net/netip"
 import "sync"
 
 type waitFirst struct{
@@ -28,4 +29,16 @@ func ( self * waitFirst )Wait( )error {
 	self.initial( )
 	defer close( self.finish )
 	return <- self.finish
+}
+
+func findPrefix( prefix map[ netip.Prefix ]any , ipaddr netip.Addr )bool {
+	var offset int
+	for offset = 48 ; offset >= 0 ; offset -= 1 {
+		var ok bool
+		_ , ok = prefix[ netip.PrefixFrom( ipaddr , offset ).Masked( ) ]
+		if ok {
+			return true
+		}
+	}
+	return false
 }

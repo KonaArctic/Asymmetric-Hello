@@ -1,4 +1,5 @@
 package main
+import "bufio"
 import "crypto/tls"
 import "encoding/hex"
 import "errors"
@@ -11,6 +12,7 @@ import "net/http"
 import "net/netip"
 import "net/url"
 import "os"
+import "strings"
 import "time"
 
 func main( ) {
@@ -21,17 +23,57 @@ func main( ) {
 		}
 		switch argues[ 0 ] {
 			case "client" :
-				if len( argues ) != 3 {
-					return 2
-				}
+				var option flag.FlagSet
+				option.SetOutput( io.Discard )
+				var always map[ netip.Prefix ]any = map[ netip.Prefix ]any{ }
+				option.Func( "anycast" , "" , func( inputs string )error{
+					var err error
+					var filept io.ReadCloser
+					filept , err = os.Open( inputs )
+					if err != nil {
+						return err
+					}
+					defer filept.Close( )
+					var reader * bufio.Reader
+					reader = bufio.NewReader( filept )
+					for {
+						var buffer [ ]byte
+						buffer , _ , err = reader.ReadLine( )
+						switch err {
+							case nil :
+							case io.EOF :
+								err = filept.Close( )
+								if err != nil {
+									return err
+								}
+								return nil
+							default :
+								return err
+						}
+						var prefix netip.Prefix
+						prefix , err = netip.ParsePrefix( strings.TrimSpace( string( buffer ) ) )
+						if err != nil {
+							return err
+						}
+						always[ prefix.Masked( ) ] = nil
+					}
+				} )
 				var locate * url.URL
-				locate , err = url.Parse( argues[ 1 ] )
+				option.Func( "server" , "https://:token@example.com/" , func( inputs string )error{
+					locate , err = url.Parse( inputs )
+					return err
+				} )
+				var resolv * string
+				resolv = option.String( "resolve" , "resolve/resolve.sh" , "" )
+				err = option.Parse( argues[ 1 : ] )
 				if err != nil {
+					_ , _ = fmt.Fprintf( os.Stderr , "%v\r\n" , err )
 					return 2
 				}
 				err = ( & client.Client{
+					Always : always ,
 					Locate : locate ,
-					Resolv : argues[ 2 ] ,
+					Resolv : * resolv ,
 				} ).Run( )
 				_ , _ = fmt.Fprintf( os.Stderr , "%v\r\n" , err )
 				return 1
