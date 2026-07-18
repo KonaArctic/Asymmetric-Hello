@@ -104,6 +104,10 @@ func ( self * Client )startAH( finish * waitFirst )( io.Closer , error ) {
 				if tcphdr.Flags & 0b00000010 > 0 {
 					_ , _ = fmt.Fprintf( os.Stdout , "New anycast stream to %v\r\n" , ip6hdr.Dst )
 					stream[ tuples ] = make( [ ]uint32 , 0 , 3 )
+					err = socket.Discard( )	// Hmmm ... not discarding this packet can mess up sequence numbers
+					if err != nil {
+						return err
+					}
 				} else {
 					var offset [ ]uint32
 					offset , ok = stream[ tuples ]
