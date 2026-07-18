@@ -12,11 +12,11 @@ alias dig=dig\ +ednsopt=65328:$2
 
 # Try to guess if a destination is censored.
 # You may need to change this depending on your circumstances.
-ipaddr=`dig +short aaaa $3`
-if [[ $ipaddr && ! $ipaddr =~ ^[0-9a-f]{0,4}::[0-9a-f]{0,4}$ ]] ; then
-	echo $ipaddr
-	exit 0
-fi
+#ipaddr=`dig +short aaaa $3`
+#if [[ $ipaddr && ! $ipaddr =~ ^[0-9a-f]{0,4}::[0-9a-f]{0,4}$ ]] ; then
+#	echo $ipaddr
+#	exit 0
+#fi
 
 # Resolve
 for script in `pwd`/*/resolve.sh ; do
