@@ -37,7 +37,7 @@ Your Internet service must be dualstack.
     -	Unix utilities
 	-	bash, curl, grepcidr, named-checkzone, and nmap
 2.	Flush or disable any firewalls, including any firewall on your Internet router
-3.	Run `ip6tables --table=filter --append=INPUT --match=tcp --protocol=tcp --source-port=443 --tcp-flags RST RST --jump=DROP`
+3.	Run `ip link set dev eth0 mtu 1500 && ip link set dev eth0 gro_max_size 1500 && ip link set dev eth0 gso_max_size 1500 && ip6tables --table=filter --append=INPUT --match=tcp --protocol=tcp --source-port=443 --tcp-flags RST RST --jump=DROP`
 4.	Run `bash resolve/prepare.sh [RESOLV]` where [RESOLV] is an uncensored recursive DNS resolver.
     -	Try `ssh -L[RESOLV]:\[2001:4860:4860::8888\]:53 [SERVER]`
 5.	Run `$(pwd)/asymhello client --anycast=anycatch-v6-prefixes.txt --resolv=resolve/resolve.sh --server=https://:[SECRET]@[SERVER]/`
