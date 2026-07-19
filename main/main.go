@@ -26,7 +26,7 @@ func main( ) {
 				var option flag.FlagSet
 				option.SetOutput( io.Discard )
 				var always map[ netip.Prefix ]any = map[ netip.Prefix ]any{ }
-				option.Func( "anycast" , "" , func( inputs string )error{
+				option.Func( "anycast" , "anycatch-v6-prefixes.txt" , func( inputs string )error{
 					var err error
 					var filept io.ReadCloser
 					filept , err = os.Open( inputs )
@@ -64,7 +64,7 @@ func main( ) {
 					return err
 				} )
 				var resolv * string
-				resolv = option.String( "resolve" , "resolve/resolve.sh" , "" )
+				resolv = option.String( "resolv" , "resolve/resolve.sh" , "" )
 				err = option.Parse( argues[ 1 : ] )
 				if err != nil {
 					_ , _ = fmt.Fprintf( os.Stderr , "%v\r\n" , err )

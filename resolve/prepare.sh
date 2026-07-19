@@ -10,3 +10,7 @@ for script in `pwd`/*/prepare.sh ; do
 	cd ${script%/*}
 	source $script
 done
+curl --fail --location --silent \
+	https://raw.githubusercontent.com/bgptools/anycast-prefixes/refs/heads/master/anycatch-v6-prefixes.txt \
+	> ../anycatch-v6-prefixes.txt
+
