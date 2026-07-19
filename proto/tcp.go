@@ -54,7 +54,7 @@ func ( self * TCPHeader )PackIPv4( header * IPv4Header , option [ ]byte , buffer
 		DataOffset : uint8( ( ( 20 + len( option ) ) / 4 ) << 4 ) ,
 		Flags : self.Flags ,
 		Window : self.Window ,
-		Checksum : Checksum( append( append( pseudo , option ... ) , buffer ... ) ) ,
+		Checksum : Checksum( append( append( append( pseudo , option ... ) , buffer ... ) , make( [ ]byte , len( buffer ) % 2 , 1 ) ... ) ) ,
 		UrgentPtr : self.UrgentPtr ,
 	}  )
 	if err != nil {
@@ -113,7 +113,7 @@ func ( self * TCPHeader )PackIPv6( header * IPv6Header , option [ ]byte , buffer
 		DataOffset : uint8( ( ( 20 + len( option ) ) / 4 ) << 4 ) ,
 		Flags : self.Flags ,
 		Window : self.Window ,
-		Checksum : Checksum( append( append( append( pseudo , option ... ) , buffer ... ) , make( [ ]byte , len( buffer ) % 2 ) ... ) ) ,
+		Checksum : Checksum( append( append( append( pseudo , option ... ) , buffer ... ) , make( [ ]byte , len( buffer ) % 2 , 1 ) ... ) ) ,
 		UrgentPtr : self.UrgentPtr ,
 	}  )
 	if err != nil {
